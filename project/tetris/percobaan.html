@@ -3,7 +3,7 @@
 <head>
   <link rel="icon" href="../../img/123.png" type="image/x-icon">
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Tetris Sederhana</title>
   <style>
     body {
@@ -16,17 +16,22 @@
       margin: 0;
       font-family: Arial, sans-serif;
       color: white;
+      touch-action: manipulation;
     }
     canvas {
       border: 2px solid #fff;
+      max-width: 100vw;
+      height: auto;
     }
     .menu, .inGameMenu {
       margin-bottom: 20px;
       display: flex;
       gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
       animation: fadeIn 1s ease;
     }
-    .menu button, .inGameMenu button {
+    .menu button, .inGameMenu button, .mobile-controls button {
       background: linear-gradient(145deg, #1e1e1e, #2c2c2c);
       color: white;
       border: 1px solid #888;
@@ -36,7 +41,7 @@
       transition: all 0.3s ease;
       box-shadow: 2px 2px 5px #00000080;
     }
-    .menu button:hover, .inGameMenu button:hover {
+    .menu button:hover, .inGameMenu button:hover, .mobile-controls button:hover {
       background: #444;
       transform: scale(1.05);
     }
@@ -51,6 +56,18 @@
       color: red;
       margin-top: 20px;
       animation: fadeIn 1s ease;
+    }
+    .mobile-controls {
+      display: none;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    @media (max-width: 768px) {
+      .mobile-controls {
+        display: flex;
+      }
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(-10px); }
@@ -77,6 +94,13 @@
   <canvas id="tetris" width="240" height="400" style="display:none;"></canvas>
   <div id="gameOver">Game Over! Skor akhir: <span id="finalScore"></span></div>
 
+  <div class="mobile-controls">
+    <button onclick="playerMove(-1)">◀</button>
+    <button onclick="playerRotatePiece()">⟳</button>
+    <button onclick="playerMove(1)">▶</button>
+    <button onclick="playerDrop()">▼</button>
+  </div>
+
   <script>
     const canvas = document.getElementById('tetris');
     const context = canvas.getContext('2d');
@@ -85,7 +109,6 @@
     const bgm = document.getElementById('bgm');
     const gameOverText = document.getElementById('gameOver');
     const finalScoreText = document.getElementById('finalScore');
-
     const inGameMenu = document.querySelector('.inGameMenu');
 
     let level = 1;
@@ -96,34 +119,24 @@
     let animationId;
 
     const arena = createMatrix(12, 20);
+    const player = { pos: {x: 0, y: 0}, matrix: null };
 
-    const player = {
-      pos: {x: 0, y: 0},
-      matrix: null,
-    };
-
-    const colors = [
-      null,
-      '#FF0D72', '#0DC2FF', '#0DFF72',
-      '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'
-    ];
+    const colors = [null, '#FF0D72', '#0DC2FF', '#0DFF72', '#F538FF', '#FF8E0D', '#FFE138', '#3877FF'];
 
     function createMatrix(w, h) {
       const matrix = [];
-      while (h--) {
-        matrix.push(new Array(w).fill(0));
-      }
+      while (h--) matrix.push(new Array(w).fill(0));
       return matrix;
     }
 
     function createPiece(type) {
-      if (type === 'T') return [[0, 0, 0], [1, 1, 1], [0, 1, 0]];
-      if (type === 'O') return [[2, 2], [2, 2]];
-      if (type === 'L') return [[0, 3, 0], [0, 3, 0], [0, 3, 3]];
-      if (type === 'J') return [[0, 4, 0], [0, 4, 0], [4, 4, 0]];
-      if (type === 'I') return [[0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0], [0, 5, 0, 0]];
-      if (type === 'S') return [[0, 6, 6], [6, 6, 0], [0, 0, 0]];
-      if (type === 'Z') return [[7, 7, 0], [0, 7, 7], [0, 0, 0]];
+      if (type === 'T') return [[0,0,0],[1,1,1],[0,1,0]];
+      if (type === 'O') return [[2,2],[2,2]];
+      if (type === 'L') return [[0,3,0],[0,3,0],[0,3,3]];
+      if (type === 'J') return [[0,4,0],[0,4,0],[4,4,0]];
+      if (type === 'I') return [[0,5,0,0],[0,5,0,0],[0,5,0,0],[0,5,0,0]];
+      if (type === 'S') return [[0,6,6],[6,6,0],[0,0,0]];
+      if (type === 'Z') return [[7,7,0],[0,7,7],[0,0,0]];
     }
 
     function drawMatrix(matrix, offset) {
@@ -140,7 +153,6 @@
     function draw() {
       context.fillStyle = '#000';
       context.fillRect(0, 0, canvas.width, canvas.height);
-
       drawMatrix(arena, {x: 0, y: 0});
       drawMatrix(player.matrix, player.pos);
     }
@@ -148,9 +160,7 @@
     function merge(arena, player) {
       player.matrix.forEach((row, y) => {
         row.forEach((value, x) => {
-          if (value !== 0) {
-            arena[y + player.pos.y][x + player.pos.x] = value;
-          }
+          if (value !== 0) arena[y + player.pos.y][x + player.pos.x] = value;
         });
       });
     }
@@ -159,10 +169,7 @@
       const [m, o] = [player.matrix, player.pos];
       for (let y = 0; y < m.length; ++y) {
         for (let x = 0; x < m[y].length; ++x) {
-          if (m[y][x] !== 0 &&
-              (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
-            return true;
-          }
+          if (m[y][x] !== 0 && (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) return true;
         }
       }
       return false;
@@ -183,9 +190,7 @@
     function arenaSweep() {
       outer: for (let y = arena.length - 1; y >= 0; --y) {
         for (let x = 0; x < arena[y].length; ++x) {
-          if (arena[y][x] === 0) {
-            continue outer;
-          }
+          if (arena[y][x] === 0) continue outer;
         }
         const row = arena.splice(y, 1)[0].fill(0);
         arena.unshift(row);
@@ -195,9 +200,7 @@
 
     function playerMove(dir) {
       player.pos.x += dir;
-      if (collide(arena, player)) {
-        player.pos.x -= dir;
-      }
+      if (collide(arena, player)) player.pos.x -= dir;
     }
 
     function playerReset() {
@@ -242,9 +245,7 @@
       const deltaTime = time - lastTime;
       lastTime = time;
       dropCounter += deltaTime;
-      if (dropCounter > dropInterval) {
-        playerDrop();
-      }
+      if (dropCounter > dropInterval) playerDrop();
       draw();
       animationId = requestAnimationFrame(update);
     }
