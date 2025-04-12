@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <link rel="icon" href="../../img/123.png" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dadu Goyang 3D</title>
+  <style>
+    body {
+      margin: 0;
+      background: radial-gradient(#e0f7fa, #80deea);
+      overflow: hidden;
+      font-family: 'Segoe UI', sans-serif;
+      text-align: center;
+      color: #333;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #overlay {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      z-index: 1;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background-color: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .counter {
+      margin: 10px 0;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div id="overlay">
+    <h2>Kocok HP-mu atau tekan tombol untuk mengocok dadu!</h2>
+    <div class="counter">Total Kocokan: <span id="counter">0</span></div>
+    <button onclick="rollDice()">Kocok Sekarang</button>
+  </div>
+  <audio id="shake-sound-1" src="https://www.soundjay.com/button/beep-01a.mp3" preload="auto"></audio>
+  <audio id="shake-sound-2" src="https://www.soundjay.com/button/beep-06.mp3" preload="auto"></audio>
+  <audio id="shake-sound-3" src="https://www.soundjay.com/button/beep-10.mp3" preload="auto"></audio>
+
+  <script src="https://cdn.jsdelivr.net/npm/three@0.150.1/build/three.min.js"></script>
+  <script>
+    let scene, camera, renderer, dice;
+    let totalRolls = 0;
+    const counterDisplay = document.getElementById("counter");
+    const soundEffects = [
+      document.getElementById("shake-sound-1"),
+      document.getElementById("shake-sound-2"),
+      document.getElementById("shake-sound-3")
+    ];
+
+    const loader = new THREE.TextureLoader();
+    const diceMaterials = [
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/2/2c/Alea_1.png") }),
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/b/b8/Alea_2.png") }),
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/2/2f/Alea_3.png") }),
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/8/8d/Alea_4.png") }),
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/5/55/Alea_5.png") }),
+      new THREE.MeshBasicMaterial({ map: loader.load("https://upload.wikimedia.org/wikipedia/commons/f/f4/Alea_6.png") })
+    ];
+
+    function init() {
+      scene = new THREE.Scene();
+      camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      document.body.appendChild(renderer.domElement);
+
+      const geometry = new THREE.BoxGeometry(2, 2, 2);
+      dice = new THREE.Mesh(geometry, diceMaterials);
+      scene.add(dice);
+      camera.position.z = 5;
+
+      animate();
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    }
+
+    function smoothRotate(mesh, targetRotation, duration = 1000) {
+      const startRotation = {
+        x: mesh.rotation.x,
+        y: mesh.rotation.y
+      };
+      const diff = {
+        x: targetRotation.x - startRotation.x,
+        y: targetRotation.y - startRotation.y
+      };
+      const startTime = performance.now();
+
+      function animateRotation(time) {
+        const elapsed = time - startTime;
+        const t = Math.min(elapsed / duration, 1);
+
+        mesh.rotation.x = startRotation.x + diff.x * easeOutElastic(t);
+        mesh.rotation.y = startRotation.y + diff.y * easeOutElastic(t);
+
+        if (t < 1) requestAnimationFrame(animateRotation);
+      }
+      requestAnimationFrame(animateRotation);
+    }
+
+    function easeOutElastic(t) {
+      const c4 = (2 * Math.PI) / 3;
+      return t === 0
+        ? 0
+        : t === 1
+        ? 1
+        : Math.pow(2, -10 * t) * Math.sin((t * 10 - 0.75) * c4) + 1;
+    }
+
+    function rollDice() {
+      totalRolls++;
+      counterDisplay.textContent = totalRolls;
+      const sound = soundEffects[Math.floor(Math.random() * soundEffects.length)];
+      sound.play();
+
+      const randX = Math.floor(Math.random() * 4 + 1) * Math.PI * 0.5 * 3;
+      const randY = Math.floor(Math.random() * 4 + 1) * Math.PI * 0.5 * 3;
+
+      // Rotate dice to match a random side
+      let targetRotation = { x: 0, y: 0 };
+      // Randomize rotation to mimic dice roll
+      smoothRotate(dice, { x: dice.rotation.x + randX, y: dice.rotation.y + randY }, 1500);
+    }
+
+    let lastShake = new Date().getTime();
+    if (window.DeviceMotionEvent) {
+      window.addEventListener("devicemotion", function(event) {
+        let acc = event.accelerationIncludingGravity;
+        let accTotal = Math.abs(acc.x) + Math.abs(acc.y) + Math.abs(acc.z);
+        let now = new Date().getTime();
+
+        if (accTotal > 25 && now - lastShake > 1000) {
+          lastShake = now;
+          rollDice();
+        }
+      });
+    }
+
+    init();
+  </script>
+</body>
+</html>

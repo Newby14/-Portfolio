@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <link rel="icon" href="../../img/123.png" type="image/x-icon">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kalkulator Sederhana</title>
+  <style>
+    body {
+      background: #f3f3f3;
+      font-family: Arial, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+    }
+    .calculator {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    .display {
+      width: 100%;
+      height: 40px;
+      margin-bottom: 10px;
+      text-align: right;
+      font-size: 24px;
+      padding: 5px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .history {
+      font-size: 14px;
+      color: #666;
+      height: 20px;
+      text-align: right;
+      margin-bottom: 10px;
+    }
+    .buttons {
+      display: grid;
+      grid-template-columns: repeat(4, 60px);
+      gap: 10px;
+    }
+    .buttons button {
+      height: 60px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #eee;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .buttons button:hover {
+      background-color: #ddd;
+    }
+    .buttons .operator {
+      background-color: #ffc107;
+    }
+    .buttons .equal {
+      background-color: #28a745;
+      color: white;
+    }
+    .buttons .clear {
+      background-color: #dc3545;
+      color: white;
+    }
+    .buttons .percent, .buttons .backspace, .buttons .func {
+      background-color: #17a2b8;
+      color: white;
+    }
+    .dark-mode {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    body.dark {
+      background: #1f1f1f;
+      color: white;
+    }
+    body.dark .calculator {
+      background: #333;
+      color: white;
+    }
+    body.dark .buttons button {
+      background-color: #444;
+      color: white;
+    }
+    body.dark .buttons button:hover {
+      background-color: #555;
+    }
+  </style>
+</head>
+<body>
+  <button class="dark-mode" onclick="toggleDarkMode()">🌙/☀️</button>
+  <div class="calculator">
+    <div class="history" id="history"></div>
+    <input type="text" class="display" id="display" disabled>
+    <div class="buttons">
+      <button onclick="clearDisplay()" class="clear">C</button>
+      <button onclick="backspace()" class="backspace">⌫</button>
+      <button onclick="append('%')" class="percent">%</button>
+      <button onclick="append('/')" class="operator">/</button>
+
+      <button onclick="append('7')">7</button>
+      <button onclick="append('8')">8</button>
+      <button onclick="append('9')">9</button>
+      <button onclick="append('*')" class="operator">*</button>
+
+      <button onclick="append('4')">4</button>
+      <button onclick="append('5')">5</button>
+      <button onclick="append('6')">6</button>
+      <button onclick="append('-')" class="operator">-</button>
+
+      <button onclick="append('1')">1</button>
+      <button onclick="append('2')">2</button>
+      <button onclick="append('3')">3</button>
+      <button onclick="append('+')" class="operator">+</button>
+
+      <button onclick="append('0')">0</button>
+      <button onclick="append('.')">.</button>
+      <button onclick="calculate()" class="equal">=</button>
+      <button onclick="append('**')" class="operator">^</button>
+
+      <button onclick="appendFunction('sin')" class="func">sin</button>
+      <button onclick="appendFunction('cos')" class="func">cos</button>
+      <button onclick="appendFunction('tan')" class="func">tan</button>
+      <button onclick="appendFunction('log')" class="func">log</button>
+
+      <button onclick="toBinary()" class="func">bin</button>
+      <button onclick="toOctal()" class="func">oct</button>
+      <button onclick="toHex()" class="func">hex</button>
+      <button onclick="toDecimal()" class="func">dec</button>
+    </div>
+  </div>
+
+  <script>
+    const display = document.getElementById('display');
+    const history = document.getElementById('history');
+
+    function append(value) {
+      display.value += value;
+    }
+
+    function appendFunction(func) {
+      let val = parseFloat(display.value);
+      if (isNaN(val)) return;
+      let result;
+      switch(func) {
+        case 'sin': result = Math.sin(val * Math.PI / 180); break;
+        case 'cos': result = Math.cos(val * Math.PI / 180); break;
+        case 'tan': result = Math.tan(val * Math.PI / 180); break;
+        case 'log': result = Math.log10(val); break;
+      }
+      history.textContent = `${func}(${val}) =`;
+      display.value = result;
+    }
+
+    function clearDisplay() {
+      display.value = '';
+      history.textContent = '';
+    }
+
+    function backspace() {
+      display.value = display.value.slice(0, -1);
+    }
+
+    function calculate() {
+      try {
+        const result = eval(display.value);
+        history.textContent = display.value + ' =';
+        display.value = result;
+      } catch {
+        display.value = 'Error';
+      }
+    }
+
+    function toBinary() {
+      const val = parseInt(display.value);
+      if (!isNaN(val)) {
+        history.textContent = `bin(${val}) =`;
+        display.value = val.toString(2);
+      }
+    }
+
+    function toOctal() {
+      const val = parseInt(display.value);
+      if (!isNaN(val)) {
+        history.textContent = `oct(${val}) =`;
+        display.value = val.toString(8);
+      }
+    }
+
+    function toHex() {
+      const val = parseInt(display.value);
+      if (!isNaN(val)) {
+        history.textContent = `hex(${val}) =`;
+        display.value = val.toString(16).toUpperCase();
+      }
+    }
+
+    function toDecimal() {
+      let val = display.value;
+      if (/^[01]+$/.test(val)) {
+        history.textContent = `dec(bin ${val}) =`;
+        display.value = parseInt(val, 2);
+      } else if (/^[0-7]+$/.test(val)) {
+        history.textContent = `dec(oct ${val}) =`;
+        display.value = parseInt(val, 8);
+      } else if (/^[0-9A-Fa-f]+$/.test(val)) {
+        history.textContent = `dec(hex ${val}) =`;
+        display.value = parseInt(val, 16);
+      }
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+  </script>
+</body>
+</html>
